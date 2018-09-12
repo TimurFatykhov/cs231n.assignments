@@ -29,7 +29,28 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  num_classes = W.shape[1]
+  a = 3
+
+  for i in range(num_train):
+    scores = X[i].dot(W)
+    max_score = scores.max()
+    exps = np.exp(scores - max_score)
+    sum_ex = np.sum(exps)
+    for j in range(num_classes):
+      if j == y[i]:
+        dW[: , j] -= (X[i] * exps[y[i]] * (sum_ex - exps[j])) / (sum_ex * exps[y[i]])
+        continue 
+      dW[: , j] += (X[i] * exps[y[i]] * exps[j]) / (sum_ex * exps[y[i]])
+
+    loss += -scores[y[i]] + max_score + np.log(sum_ex)
+
+  loss /= num_train
+  loss += reg * np.sum(W * W)
+
+  dW /= num_train
+  dW += reg * 2 * W 
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -53,7 +74,38 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  num_train = X.shape[0]
+  num_classes = W.shape[1]
+
+  # LOSS
+  scores = X.dot(W)
+  max_score = scores.max()
+  exps = np.exp(scores - max_score)
+  sum_ex = np.sum(exps, axis = 1)
+  loss = np.sum( -scores[range(num_train) , y] + max_score + np.log(sum_ex) )
+
+  loss /= num_train
+  loss += reg * np.sum(W * W)
+
+  # GRADIENT
+
+  # 1-st method
+  # for w_yi  : -exps[y[i]] * exps[j] + exps[y[i]] * sum_ex  / (sum_ex * exps[y[i]])
+  # for w_j   : -exps[y[i]] * exps[j]                        / (sum_ex * exps[y[i]])
+  #
+  # coeffs = -exps * exps[range(num_train), y].reshape(-1, 1)
+  # coeffs[range(num_train), y] += exps[range(num_train), y] * sum_ex
+  # coeffs /= sum_ex.reshape(-1,1)
+  # coeffs /= exps[range(num_train), y].reshape(-1, 1)
+
+  # 2-nd method
+  coeffs = exps / sum_ex.reshape(-1,1)
+  coeffs[range(num_train), y] -= 1
+
+  dW = X.T.dot(coeffs)
+
+  dW /= num_train
+  dW += reg * 2 * W 
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
